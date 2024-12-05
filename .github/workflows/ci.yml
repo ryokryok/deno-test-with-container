@@ -14,9 +14,13 @@ defaults:
   run:
     shell: bash
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
-    timeout-minutes: 15
+    timeout-minutes: 5
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,5 +31,5 @@ jobs:
         run: deno fmt --check
       - name: Lint
         run: deno lint
-      - name: Lint
+      - name: Test
         run: deno test
