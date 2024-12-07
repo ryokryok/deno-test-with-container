@@ -1,6 +1,8 @@
 {
+  "license": "MIT",
   "tasks": {
     "dev": "deno run --watch main.ts",
+    "test": "deno test --allow-env --allow-net --env-file",
     "container:up": "docker compose up -d",
     "container:down": "docker compose down"
   },
