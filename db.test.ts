@@ -13,6 +13,7 @@ import {
 
 describe("test", () => {
   let client: Client;
+
   beforeAll(async () => {
     client = new Client({
       user: Deno.env.get("DB_USER"),
@@ -22,29 +23,23 @@ describe("test", () => {
       port: Deno.env.get("DB_PORT"),
     });
     await client.connect();
+  });
 
+  beforeEach(async () => {
     // setup table
     await client.queryObject(
       "CREATE TABLE IF NOT EXISTS people(id SERIAL PRIMARY KEY, username VARCHAR(40) NOT NULL)",
     );
   });
 
-  beforeEach(() => {
-    //
-  });
-
   afterAll(async () => {
-    // setup table
-    await client.queryObject(
-      "DROP TABLE people",
-    );
     await client.end();
   });
 
   afterEach(async () => {
     // reset table
     await client.queryObject(
-      "DELETE FROM ONLY people",
+      "DROP TABLE IF EXISTS people",
     );
   });
 
@@ -62,10 +57,7 @@ describe("test", () => {
 
     // only created record
     assertStrictEquals(result.rowCount, 1);
-
-    const record = result.rows[0];
-
-    assertObjectMatch(record, { id: 1, username: "foobar" });
+    assertObjectMatch(result.rows[0], { id: 1, username: "foobar" });
   });
 
   it("people table should be reset", async () => {
