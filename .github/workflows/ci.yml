@@ -19,9 +19,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  format-lint:
     timeout-minutes: 5
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v2
@@ -31,5 +32,33 @@ jobs:
         run: deno fmt --check
       - name: Lint
         run: deno lint
+
+  db-test:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
       - name: Test
-        run: deno test
+        run: deno test --allow-env --allow-net ./db/postgres.test.ts
+        env:
+          DB_USER: "postgres"
+          DB_PASSWORD: "postgres"
+          DB_DATABASE: "postgres"
+          DB_HOSTNAME: "localhost"
+          DB_PORT: 5432
