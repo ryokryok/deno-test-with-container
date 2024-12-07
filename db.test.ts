@@ -11,6 +11,8 @@ import {
   it,
 } from "@std/testing/bdd";
 
+type RecordType = { id: number; username: string };
+
 describe("test", () => {
   let client: Client;
 
@@ -44,8 +46,6 @@ describe("test", () => {
   });
 
   it("insert 1 people", async () => {
-    type RecordType = { id: number; username: string };
-
     await client.queryObject<RecordType>(
       "INSERT INTO people(username) VALUES($1) RETURNING *",
       ["foobar"],
@@ -65,5 +65,58 @@ describe("test", () => {
       "SELECT * FROM people",
     );
     assertStrictEquals(result.rowCount, 0);
+  });
+
+  it("update 1 people", async () => {
+    await client.queryObject<
+      RecordType
+    >`INSERT INTO people(username) VALUES(${"foobar"})`;
+
+    await client.queryObject<
+      RecordType
+    >`UPDATE people SET username = ${"quux"} WHERE id = ${1}`;
+
+    const result = await client.queryObject<
+      RecordType
+    >`SELECT * FROM people WHERE id = ${1}`;
+
+    assertObjectMatch(result.rows[0], { id: 1, username: "quux" });
+  });
+
+  it("transaction commit", async () => {
+    const t = client.createTransaction("aaa");
+    await t.begin();
+
+    await t.queryObject<RecordType>(
+      "INSERT INTO people(username) VALUES($1) RETURNING *",
+      ["foobar"],
+    );
+
+    await t.commit();
+
+    const result = await client.queryObject<RecordType>(
+      "SELECT * FROM people",
+    );
+
+    assertObjectMatch(result.rows[0], { id: 1, username: "foobar" });
+  });
+
+  it("transaction rollback", async () => {
+    // initial value
+    await client.queryObject<RecordType>(
+      "INSERT INTO people(username) VALUES($1) RETURNING *",
+      ["DONT DELETE ME"],
+    );
+
+    const t = client.createTransaction("rollback_point");
+    await t.begin();
+    await t.queryObject("TRUNCATE TABLE people");
+    await t.rollback();
+
+    const result = await client.queryObject<RecordType>(
+      "SELECT * FROM people",
+    );
+
+    assertObjectMatch(result.rows[0], { id: 1, username: "DONT DELETE ME" });
   });
 });
